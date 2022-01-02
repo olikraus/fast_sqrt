@@ -69,55 +69,137 @@ int get_highest_1_bit_position(uint32_t v)
 }
 #endif
 
-uint16_t fast_sqrt(int16_t number)
+
+/*
+  Prototype:
+    uint16_t fast_sqrt(int16_t number)
+  Description:
+    Calculate the square root for a 1.15 fix point value
+    Valid input values are from 0 to 0x7fff (0 to .9999694824).
+  Arg
+    number: A 1.15 fix point value from which the square root is calculated
+  Returns
+    The square root of "number" or 0 if the "number" is negative
+*/
+
+int16_t fast_sqrt(int16_t number)
 {
   uint32_t temp;
   uint32_t x;
   
   int number_up_shift = 0;
-  int iterations;
   int highest_bit_position;
+  
+  /*
+    Check whether the input is negative. If so, return 0.
+  */
+  if ( number < 0 )
+    return 0;
 
+  /*
+    The following block increases accuracy by shifting up small values.
+    Idea: sqrt(n) == sqrt(4*n/4) == sqrt(4*n)/2
+    Instead of calculating sqrt(n), calculate sqrt(4*n) and divide by 2 at the end.
+    For the implementation a more general approach is used: sqrt(2^(2*s) * n) / 2^s
+  
+    In the first step, calculate the position of the highest one-bit. 
+    Some architectures provide a "count left zeros" function, which could be used to get the highest one bit.-
+  */
 #ifndef USE_BUILDIN_CLZ
   highest_bit_position = get_highest_1_bit_position(number);
 #else
   highest_bit_position = INPUT_COMMA;
   if ( number > 0 )
     highest_bit_position  = 31-__builtin_clz(number);
-#endif
-  
+#endif  
+  /*
+    Upshift is only possible if the highes one bit is more than 2 bit positions below the comma of the input value
+  */
   if ( INPUT_COMMA >= highest_bit_position + 2 )
   {
-    number_up_shift = INPUT_COMMA - highest_bit_position - 2;         // upshift must be at least 2
-    number_up_shift &= 0x0fe;                           // we must be able to deivide by 2 without reminder
-    number <<= number_up_shift;                         // upscale the number, for example if this is 6, then...
-    number_up_shift /= 2;                                       // scale the result down by 3 (half of 6)
+    number_up_shift = INPUT_COMMA - highest_bit_position - 2;         /* Calculate the number of left shifts +7
+    number_up_shift &= 0x0fe;                           /* Ensure that the number is even, so that we can fix the left shift of the result later */
+    number <<= number_up_shift;                         /* Do the upshift */
+    number_up_shift /= 2;                                       /* Calculate the value for the down shift of the result: Downshift is half of the upshift */
   }
 
-  x = sqrt_start_values[number >> (INPUT_COMMA - SQRT_START_BITS)];
+  /*
+    Find a suitable starting point for the approximation process defined by
+          x := x + x*(1-d*x*x)/2 
+    This iterative approximation will calculate the inverse square root of x (1/sqrt(x))
+    The initial 16 values for x are the  following values:
+      0 0000 000 00000000
+      0 0001 000 00000000
+      0 0011 000 00000000
+      ...
+      0 1111 000 00000000
+    The lookup table sqrt_start_values will return the precalculated result (inverse square root).
+  
+    The following iteration process will use a different fix point format 2.14.
+    Values within sqrt_start_values are already in 2.14 format.
+  */
+  
+  x = sqrt_start_values[number >> (INPUT_COMMA - SQRT_START_BITS)];     /* fix-point 2.14 */
   
   /* 
-    inverse square root (https://www.jjj.de/fxt/fxtbook.pdf, page 568)
-    x := x + x*(1-d*x*x)/2 
-    x := x * ( 1 + (1-d*x*x)/2 )
-    x := x * ( 1 + 0.5 - d*x*x/2 )
-    x := x * ( 1.5 - d*x*x/2 )
+    Calculate the ivnerse square root by using the following iterative approximation:
+        x := x + x*(1-d*x*x)/2 (https://www.jjj.de/fxt/fxtbook.pdf, page 568)
+    By restructuring the expression, we can remove one add operation:    
+      x := x + x*(1-d*x*x)/2 
+      x := x * ( 1 + (1-d*x*x)/2 )
+      x := x * ( 1 + 0.5 - d*x*x/2 )
+      
   */
-  for( iterations = 0; iterations < 3; iterations++ )
-  {
-    temp = x;
-    temp *= x;
-    temp >>= INTERNAL_COMMA;
-    
-    temp *= number;
-    temp >>= INPUT_COMMA+1;
-    
-    temp = INTERNAL_ONE + (INTERNAL_ONE>>1) - temp;
-    x *= temp;
-    x >>= INTERNAL_COMMA;
-    
-  }
-  x *= number;
+  
+  /* iteration 1 */
+  temp = x;                                     /* x is already in 2.14 format */
+  temp *= x;                                    /* 2.14 * 2.14 */
+  temp >>= INTERNAL_COMMA;      /* shift by 14 to get 2.14 format */
+  
+  temp *= number;                               /* d*x*x/2: 1.15 * 2.14 */
+  temp >>= INPUT_COMMA+1;           /* to get the 2.14 format, shift by 15 (1.15) and additionally divide by 2 ("+1") */ 
+  
+  temp = INTERNAL_ONE + (INTERNAL_ONE>>1) - temp;   /* 1 + 0.5 - d*x*x/2 */
+  x *= temp;                                            /* 2.14 * 2.14 */
+  x >>= INTERNAL_COMMA;                  /* shift by 14 to get 2.14 format */
+
+  /* iteration 2 */
+  temp = x;
+  temp *= x;
+  temp >>= INTERNAL_COMMA;
+  
+  temp *= number;
+  temp >>= INPUT_COMMA+1;
+  
+  temp = INTERNAL_ONE + (INTERNAL_ONE>>1) - temp;
+  x *= temp;
+  x >>= INTERNAL_COMMA;
+
+  /* iteration 3 */
+  temp = x;
+  temp *= x;
+  temp >>= INTERNAL_COMMA;
+  
+  temp *= number;
+  temp >>= INPUT_COMMA+1;
+  
+  temp = INTERNAL_ONE + (INTERNAL_ONE>>1) - temp;
+  x *= temp;
+  x >>= INTERNAL_COMMA;
+
+  /*
+    "x" contains the inverse root 1/sqrt(number).
+      x = 1/sqrt(number)
+    If we multiple both sides with "number", then we get sqrt(number):
+      x*number = 1/sqrt(number)*number = sqrt(number)
+  */
+
+  x *= number;  /* fix-point: 1.15 * 2.14 */
+  
+  /*
+    The previous multiplication has to be corrected by the internal 2.14 fix point to get the 1.15 format.
+    Additionally undo the initial up shift of the input value.
+  */
   x >>= INTERNAL_COMMA+number_up_shift;
   
   return x;

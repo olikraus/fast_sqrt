@@ -1,6 +1,10 @@
 /*
 
   Copyright (c) 2021, olikraus@gmail.com
+  
+  Test code for fast_sqrt.c
+  
+  gcc test_fast_sqrt.c fast_sqrt.c && ./a.out
 
   Redistribution and use in source and binary forms, with or without modification, are 
   permitted provided that the following conditions are met:
@@ -35,7 +39,8 @@
 #define INTERNAL_COMMA 14
 #define INTERNAL_ONE (1UL<<INTERNAL_COMMA)
 
-extern uint16_t fast_sqrt(int16_t number);
+int16_t fast_sqrt(int16_t number);
+
 
 void test_fast_sqrt(int16_t number)
 {

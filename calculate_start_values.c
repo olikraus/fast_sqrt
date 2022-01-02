@@ -2,6 +2,8 @@
 
   calculate_start_values.c
   
+  gcc calculate_start_values.c && ./a.out
+  
   Calculate values of the look up table for fast_sqrt.c
 
   Copyright (c) 2021, olikraus@gmail.com
