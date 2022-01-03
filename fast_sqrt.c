@@ -117,7 +117,7 @@ int16_t fast_sqrt(int16_t number)
   */
   if ( INPUT_COMMA >= highest_bit_position + 2 )
   {
-    number_up_shift = INPUT_COMMA - highest_bit_position - 2;         /* Calculate the number of left shifts +7
+    number_up_shift = INPUT_COMMA - highest_bit_position - 2;         /* Calculate the number of left shifts */
     number_up_shift &= 0x0fe;                           /* Ensure that the number is even, so that we can fix the left shift of the result later */
     number <<= number_up_shift;                         /* Do the upshift */
     number_up_shift /= 2;                                       /* Calculate the value for the down shift of the result: Downshift is half of the upshift */
