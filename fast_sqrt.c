@@ -82,13 +82,13 @@ int get_highest_1_bit_position(uint32_t v)
     The square root of "number" or 0 if the "number" is negative
 */
 
-int16_t fast_sqrt(int16_t number)
+int16_t fast_sqrt(int16_t n)
 {
   uint32_t temp;
-  uint32_t x;
-  
+  uint32_t x;  
   int number_up_shift = 0;
   int highest_bit_position;
+  uint16_t number = n;
   
   /*
     Check whether the input is negative. If so, return 0.
@@ -202,5 +202,21 @@ int16_t fast_sqrt(int16_t number)
   */
   x >>= INTERNAL_COMMA+number_up_shift;
   
+  /* 
+    At this point the error might be up to two bits.
+    Perform a final increase in the precision, by comparing the quadric value with the original number.
+    For this purpose we store the square in temp and the difference in "n".
+    
+    This section is optional, but will increase precision of the result a little bit.
+  */
+  temp = x;
+  temp *= x;                                    /* square value of x */
+  temp >>= INPUT_COMMA;         /* square value of x in 1.15 format */
+  n -= temp;                                    /* reuse n to store the signed difference */
+     
+  if ( n > 1 || n < -1 )                      /* update result only if the current difference is larger than 1 */
+    x += n>>1;
+  
+  /* finally return the square root of the input value */
   return x;
 }
