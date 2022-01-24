@@ -111,6 +111,8 @@ int16_t fast_sqrt(int16_t n)
   highest_bit_position = INPUT_COMMA;
   if ( number > 0 )
     highest_bit_position  = 31-__builtin_clz(number);
+  else
+    highest_bit_position  = 31;
 #endif  
   /*
     Upshift is only possible if the highes one bit is more than 2 bit positions below the comma of the input value
