@@ -3,8 +3,8 @@ Fast Square Root Calculation for 16 Bit Fix-Point values from 0 to 1 (1.15)
 
 
 ## Problem Description
- * Calculate square root for a value between 0 and 1, return 0 for negative values
- * Intended for embeddes systems without FPU
+ * Calculate square root for a value between 0 and 1 (1+15 bit fix point), return 0 for negative values
+ * Intended for embedded systems without FPU
  * Pure integer calculation
  * 16 bit signed integer as input and output data type
  * Integer format is 1.15 fix point for input and output
