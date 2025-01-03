@@ -33,6 +33,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <math.h>
 
 #define INPUT_COMMA 15
 #define INPUT_ONE (1UL<<INPUT_COMMA)
@@ -50,6 +51,9 @@ void test_fast_sqrt(int16_t number)
   int16_t r = fast_sqrt(number);
   int16_t rr = ((int32_t)r*(int32_t)r) >> INPUT_COMMA;
   int16_t rr_diff = number-rr;
+  int16_t r_math = (int16_t)((sqrt(((double)number)/(double)INPUT_ONE))*(double)INPUT_ONE);
+  int16_t r_math_r = ((int32_t)r_math*(int32_t)r_math) >> INPUT_COMMA;
+  int16_t r_math_r_diff = number - r_math_r;
   
   
   //int16_t rr_half_diff = rr_diff > 1 || rr_diff < -1  ? rr_diff>>1 : 0;
@@ -66,15 +70,16 @@ void test_fast_sqrt(int16_t number)
   
   //if ( f_rr_diff >= 2 || f_rr_diff <= -2)
   //printf("%d: root=%d root^2=%d diff=%d - root=%d root^2=%d diff=%d \n", number, r, rr, rr_diff, f_r, f_rr, f_rr_diff);
-  printf("%d: root=%d root^2=%d diff=%d \n", number, r, rr, rr_diff);
+  printf("%d: math_sqrt=%d ^2=%d diff=%d       fast_sqrt=%d ^2=%d diff=%d \n", number, r_math, r_math_r, r_math_r_diff, r, rr, rr_diff);
 }
 
-void main(void)
+int main(void)
 {
   int16_t i;
   for( i = 0; i < INPUT_ONE; i++ )
     test_fast_sqrt(i);
   printf("no of deviations equal to 2: %u\n", eq2_cnt);
   printf("no of deviations greater equal to 3: %u\n", ge3_cnt);
+  return 0;
 }
 
